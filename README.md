@@ -1,11 +1,22 @@
 # design-gate
 
-**Your agent reviews specs with fresh-context subagents. This proves it.**
+Two small skills that check a design review instead of trusting it.
 
-A review that nobody can check is a review you have to take on faith. `design-gate`
-turns a design review into artifacts a script rejects: the exact prompt each
-reviewer received, the spec version they all saw, and a `fixed` decision that needs
-the document changed *and* a later round to agree.
+A review that nobody can check is a review you took on faith. These skills turn a
+design review into files a script can reject: the exact prompt each reviewer
+received, the spec version they all saw, and a `fixed` decision that needs the
+document changed *and* a later round to agree.
+
+It is a personal tool, published in case it is useful. MIT, no support promised.
+
+## What it solves
+
+| Problem | What this does |
+|---|---|
+| An agent reviews the spec it just wrote, in the same conversation, and reports a fresh-eyes review | reviewers get a fixed prompt with no conversation in it; any line outside the template fails the run |
+| "Fresh context" is a sentence in the procedure, and nobody checks it | the prompt is stored and compared against the template, the spec and the persona on disk |
+| Findings marked "resolved" that were never written | `fixed` requires the document to change and the next round to say `resolved` for that id |
+| Documentation that described the code six months ago | the spec's factual claims are checked against the repo, and the doc against the version that was approved |
 
 ## Install
 
@@ -13,15 +24,11 @@ the document changed *and* a later round to agree.
 
 > Install https://github.com/dandrok/design-gate
 
-It runs the host's own installer (`hermes plugins install`, `claude plugin
-marketplace add`, `codex plugin marketplace add`), drops both skills in place, and
-confirms the two gate scripts run. Nothing to configure.
-
 <details>
-<summary>Or the commands, if you prefer to see them</summary>
+<summary>Or run the installer yourself</summary>
 
 ```bash
-# Hermes — portable package, skills land namespaced and read-only
+# Hermes
 hermes plugins install dandrok/design-gate --no-enable
 hermes plugins enable design-gate
 
@@ -35,19 +42,9 @@ codex plugin add design-gate@design-gate
 ```
 </details>
 
-## What it is
-
-| | |
-|---|---|
-| **`design-review`** | reviews a design document with isolated reviewers, then proves the isolation and that every blocker was fixed in the document |
-| **`design-drift`** | checks the document's factual claims against the repo, and the document against the version that was approved |
-
-## What it is not
-
-- Not a spec writer — bring a spec that already passes
-  [`spec-writer`](https://github.com/dandrok/dev-flow-skills)'s `validate-spec.py`.
-- Not an architect. A reviewer with bad questions passes every gate here.
-- Not a code reviewer. For the diff, use a code-review skill.
+Bring a spec that already passes
+[`spec-writer`](https://github.com/dandrok/dev-flow-skills)'s `validate-spec.py` —
+this tool checks reviews, it does not write specifications.
 
 ## How it works
 
@@ -79,34 +76,34 @@ flowchart TD
 
 ```
 spec.md
-  │  validate-spec.py  ── fails ──► fix the spec
-  ▼
+  |  validate-spec.py  -- fails --> fix the spec
+  v
 run.json                      personas, allowlist, rounds
-  │
-  ▼
+  |
+  v
 one prompt per persona       template + persona + spec + cited sources
-  │
-  ├── reviewer 1  (fresh context)
-  ├── reviewer 2  (fresh context)
-  └── reviewer 3  (fresh context)
-  │
-  ▼
+  |
+  +-- reviewer 1  (fresh context)
+  +-- reviewer 2  (fresh context)
+  +-- reviewer 3  (fresh context)
+  |
+  v
 prompts/ receipts/ findings/  what each reviewer actually saw
-  │
-  ▼
-gate_review.py ── fail ──► fix the run or the spec ──► back to run.json
-  │
+  |
+  v
+gate_review.py -- fail --> fix the run or the spec --> back to run.json
+  |
   pass
-  ▼
-spec approved ──► build the feature ──► gate_drift.py
-                                            │      │
-                                          drift   clean
-                                            │      └──► merge
-                                            └──► fix the doc or revert the code
+  v
+spec approved --> build the feature --> gate_drift.py
+                                           |      |
+                                         drift   clean
+                                           |      +--> merge
+                                           +--> fix the doc or revert the code
 ```
 </details>
 
-The gate reads the artifacts, not the report. What it refuses:
+What the gate refuses:
 
 | Refused | Because |
 |---|---|
@@ -119,31 +116,6 @@ The gate reads the artifacts, not the report. What it refuses:
 | a spec that fails its own validator | reviewing a document that cannot be built is theatre |
 | `fixed` with an unchanged document | the fix was asserted, not written |
 | a `fixed` the next round reopened | the fix did not hold |
-
-## Why it exists
-
-Coding agents now write the spec and the review of their own spec. The failure mode
-is not a shallow review — it is *"there was no review, and the log says there was."*
-Every review plugin in this space reports its own homework: the transcript claims a
-fresh subagent, the report claims the findings were resolved. Nothing checks.
-
-The one property that cannot be faked is a stored prompt. So the gate stores it,
-re-reads it, and compares it with the template, the spec and the persona on disk.
-
-## Why not just a review skill?
-
-A review skill is instructions. This is instructions plus a referee that can say no.
-
-| | A review skill | design-gate |
-|---|---|---|
-| Ends with | a report saying "no blockers" | `exit 1` and a list of what is missing |
-| "Fresh context" | a sentence in the procedure | the prompt is on disk, and any line outside the template fails the run |
-| "Fixed" | the model's word | the document changed, and a later round says `resolved` for that id |
-| Re-checkable later | no, it lives in a transcript | yes, reopen the run directory |
-
-Use it when agents do the reviewing, when someone else has to trust the result, or
-when you want a merge blocked on it. If you review your own spec alone, a plain
-review skill is cheaper.
 
 ## Quickstart
 
@@ -193,30 +165,21 @@ docs/pilot.md                    two cold rounds against a real spec
 
 ## What is verified, and what is not
 
-Verified by running:
-
-- `tests/run-all.sh` → **39/39 cases pass** (25 review, 14 drift). The clean run is
-  approved; each other case seeds one defect and asserts the gate's *message*, not
-  just its exit code.
-- Drift: true claims pass; missing path, renamed symbol, symbol outside its claimed
-  scope, unregistered endpoint, absent command, no claims block, unparseable claim,
-  unknown claim kind, symbol only in `node_modules`, and a deleted route are each
-  named; lineage passes on the approved document and fails on an edited one.
-- Two cold pilot rounds on a real spec, recorded in [`docs/pilot.md`](docs/pilot.md):
-  23 findings in round 1, 21 verified fixed in round 2, 2 reopened by the reviewer
-  that raised them.
+Verified by running `tests/run-all.sh` — **39/39 cases** (25 review, 14 drift). The
+clean run is approved; each other case seeds one defect and asserts the gate's
+*message*, not just its exit code. Two cold pilot rounds are recorded in
+[`docs/pilot.md`](docs/pilot.md): 23 findings in round 1, 21 verified fixed in round
+2, 2 reopened by the reviewer that raised them.
 
 Not verified, stated plainly:
 
-- **Spec-gate integration is exercised with a test double.** The suite proves the
-  wiring (exit 0 passes, exit 1 blocks approval) against a stub with the same
-  contract, not spec-writer's 300-line validator.
-- **Persona quality has one data point, and it is not flattering.** The pilot found
+- **Spec-gate integration is exercised with a test double**, not spec-writer's real
+  validator. The suite proves the wiring: exit 0 passes, exit 1 blocks approval.
+- **Reviewer quality has one data point and it is not flattering.** The pilot found
   plenty and missed the one defect planted deliberately.
 - **The gate verifies artifacts, not the transport.** A dispatcher that writes a
-  clean prompt and never sends it passes. The gate catches sloppiness and
-  self-deception; it does not catch a determined liar. What it does give you is
-  evidence you can re-read later.
+  clean prompt and never sends it passes. It catches sloppiness and self-deception,
+  not a determined liar — what it does give you is evidence you can re-read later.
 
 ## Limits
 
@@ -230,4 +193,4 @@ Not verified, stated plainly:
 
 ## Licence
 
-MIT. Prior art is credited in [NOTICE.md](NOTICE.md).
+MIT — see [LICENSE](LICENSE). Prior art credited in [NOTICE.md](NOTICE.md).
