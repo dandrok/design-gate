@@ -80,34 +80,6 @@ spec approved --> build --> gate_drift.py
                 +--> re-run gate_drift.py
 ```
 
-<details>
-<summary>Mermaid version, if your viewer renders it</summary>
-
-```mermaid
-flowchart TD
-    A[spec.md] --> B{spec validates}
-    B -->|no| A
-    B -->|yes| C[write run.json]
-    C --> D[build one prompt per persona]
-    D --> E1[reviewer 1 fresh context]
-    D --> E2[reviewer 2 fresh context]
-    D --> E3[reviewer 3 fresh context]
-    E1 --> F[save prompts receipts findings]
-    E2 --> F
-    E3 --> F
-    F --> G{gate_review.py}
-    G -->|fail| H[fix the run or the spec]
-    H --> C
-    G -->|pass| I[spec approved]
-    I --> J[build the feature]
-    J --> K{gate_drift.py}
-    K -->|drift| L[fix the doc or revert the code]
-    L --> K
-    K -->|clean| M[merge]
-```
-
-</details>
-
 What the gate refuses:
 
 | Refused | Because |
