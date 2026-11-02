@@ -216,7 +216,15 @@ receive the reviewer prompts; it does not need the conversation either.
    question the existing ones do not ask.
 4. **Treating exit 1 as a tooling problem.** Every message names the file and the
    reason; the fix is always in the run directory.
-5. **A `minor` finding used to bury a `blocker`.** Severity is the reviewer's
+5. **Editing a persona mid-run.** The gate compares every prompt's PERSONA block
+   against the persona directory the run points at, so an edit between rounds fails
+   the run — correctly: round 1 and round 2 reviewers answered different questions.
+   Finish the run, then change the persona, then start a new run.
+6. **Not carrying ids forward.** With three or more rounds, each later round's
+   `prior` map must still list every earlier blocker/major, resolved or reopened.
+   The gate only reads the last round, so an id you stop carrying reads as
+   "never re-tested".
+7. **A `minor` finding used to bury a `blocker`.** Severity is the reviewer's
    call; resolution is yours. If a minor finding implies a design change, raise
    it to major in a round-2 dispatch rather than silently fixing it.
 

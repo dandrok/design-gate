@@ -162,6 +162,20 @@ def m_round2_reopened(r: Path) -> None:
     edit_json(r / "review" / "findings" / "implementability.r2.json", fn)
 
 
+def m_open_in_two_rounds(r: Path) -> None:
+    """Same id unresolved in round 1 and reopened in round 2: reported once."""
+    def fn(d):
+        d["prior"] = {"I1": "reopened"}
+        d["verdict"] = "findings"
+        d["findings"] = [{"id": "I1", "severity": "blocker",
+                          "section": "5. Failure and edge behaviour",
+                          "claim": "The added paragraph still does not say who performs the "
+                                   "first attempt, so the fix left the ordering ambiguous.",
+                          "evidence": "spec.md:55"}]
+    edit_json(r / "review" / "findings" / "implementability.r2.json", fn)
+    edit_json(r / "review" / "resolutions.json", lambda d: d.pop("implementability/I1"))
+
+
 def m_duplicate_id(r: Path) -> None:
     def fn(d):
         d["findings"].append(dict(d["findings"][0]))
@@ -210,6 +224,8 @@ CASES = [
     ("evidence outside the inputs", m_evidence_outside, 1, "evidence points at"),
     ("duplicate finding id", m_duplicate_id, 1, "duplicate finding id"),
     ("round 2 declares no prior map", m_round2_without_prior, 1, "carries no `prior` map"),
+    ("an id open in two rounds is reported once", m_open_in_two_rounds, 1,
+     "1 blocker/major finding(s) unresolved: implementability/I1\n"),
     ("round 2 reopened the finding", m_round2_reopened, 1, "reopened it"),
     ("no required reviewers", m_no_personas, 1, "theatre"),
     ("prompt holds an edited spec", m_prompt_without_spec, 1, "not the spec under review"),

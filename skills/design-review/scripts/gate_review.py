@@ -345,7 +345,8 @@ def gate(review: Path, spec_gate: Path | None, template: Path | None) -> tuple[l
                 key = f"{persona}/{f.get('id')}"
                 r = res.get(key)
                 if not isinstance(r, dict):
-                    open_items.append(key)
+                    if key not in open_items:  # an id still open in two rounds is one item
+                        open_items.append(key)
                     continue
                 status = str(r.get("status", "")).lower()
                 if status not in {"fixed", "accepted", "rejected"}:

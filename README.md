@@ -119,7 +119,7 @@ tests/run-all.sh                 every skill's own suite, one total
 
 Verified by running:
 
-- `tests/run-all.sh` → **38/38 cases pass** (24 review, 14 drift). The clean run
+- `tests/run-all.sh` → **39/39 cases pass** (25 review, 14 drift). The clean run
   is approved; each of the other 34 seeds one defect and asserts the gate's
   *message*, not just its exit code.
 - The gate rejects: a missing receipt, a receipt admitting a conversation, a

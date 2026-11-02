@@ -32,6 +32,34 @@ the neighbouring problems — the retry cap stated twice with different readings
 cited source cannot support. Dense findings, and still a miss on the one defect
 planted deliberately.
 
+## Round 2
+
+The spec was rewritten against all 8 round-1 blockers (single attempt budget,
+enumerable retryable set, insert-before-send ordering, permanent dedupe index,
+tenant in the lookup, audit table columns, named entry point, migration backfill),
+then the same three personas re-read it with a `PRIOR` block listing their own
+findings and one decision per id.
+
+| | |
+|---|---|
+| Round-1 findings verified fixed | 21 of 23 |
+| Reopened by the reviewer that raised them | 2 (implementability X3, X6) |
+| New findings in round 2 | 14 (2 blocker, 9 major, 3 minor) |
+| Gate verdict | **exit 1** — 13 open blocker/major items |
+
+The two reopenings were both legitimate: AC-7 still said "500/502/503/504" while
+section 5 said "any 5xx", and the migration gained no join predicate for the
+backfill. A fresh reviewer numbering its findings X1.. would have hidden both.
+
+The gate also caught two defects of the pilot itself:
+
+1. **Persona drift mid-run.** `agents/implementability.md` was edited between
+   rounds (check 2b), so round 1 and round 2 reviewers read different personas.
+   The gate compares each prompt's PERSONA block against the run's persona
+   directory and refused. Rule: a persona edit invalidates an in-flight run.
+2. **Duplicate keys.** One id open in two rounds was reported twice. Fixed, with a
+   test asserting the id appears once.
+
 ## What changed as a result
 
 - `agents/implementability.md` gained check **2b — cap exhaustion**: for anything
