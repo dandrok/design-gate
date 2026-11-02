@@ -145,6 +145,23 @@ def m_evidence_outside(r: Path) -> None:
               lambda d: d["findings"][0].update({"evidence": "src/other.ts:12"}))
 
 
+def m_round2_without_prior(r: Path) -> None:
+    edit_json(r / "review" / "findings" / "implementability.r2.json",
+              lambda d: d.pop("prior"))
+
+
+def m_round2_reopened(r: Path) -> None:
+    def fn(d):
+        d["prior"] = {"I1": "reopened"}
+        d["verdict"] = "findings"
+        d["findings"] = [{
+            "id": "I1", "severity": "blocker", "section": "5. Failure and edge behaviour",
+            "claim": "Section 5 now names the post-fifth-attempt state but not whether the row "
+                     "is retried by another mechanism, so the fix is incomplete.",
+            "evidence": "spec.md:55"}]
+    edit_json(r / "review" / "findings" / "implementability.r2.json", fn)
+
+
 def m_duplicate_id(r: Path) -> None:
     def fn(d):
         d["findings"].append(dict(d["findings"][0]))
@@ -153,6 +170,14 @@ def m_duplicate_id(r: Path) -> None:
 
 def m_no_personas(r: Path) -> None:
     edit_json(r / "review" / "run.json", lambda d: d.update({"required_personas": []}))
+
+
+def m_source_path_spelled_differently(r: Path) -> None:
+    """Same file, written as ./src/... — must match the allowlist entry."""
+    for name in ("prompts/implementability.r1.txt", "receipts/implementability.r1.json"):
+        p = r / "review" / name
+        p.write_text(p.read_text(encoding="utf-8").replace(
+            "src/webhooks/deliver.ts", "./src/webhooks/deliver.ts"), encoding="utf-8")
 
 
 def m_prompt_without_spec(r: Path) -> None:
@@ -184,8 +209,12 @@ CASES = [
     ("declared round with no prompt", m_round_missing, 1, "no prompt on disk"),
     ("evidence outside the inputs", m_evidence_outside, 1, "evidence points at"),
     ("duplicate finding id", m_duplicate_id, 1, "duplicate finding id"),
+    ("round 2 declares no prior map", m_round2_without_prior, 1, "carries no `prior` map"),
+    ("round 2 reopened the finding", m_round2_reopened, 1, "reopened it"),
     ("no required reviewers", m_no_personas, 1, "theatre"),
     ("prompt holds an edited spec", m_prompt_without_spec, 1, "not the spec under review"),
+    ("source path spelled ./ still matches the allowlist", m_source_path_spelled_differently,
+     0, "APPROVED"),
 ]
 
 

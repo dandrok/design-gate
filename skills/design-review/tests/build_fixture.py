@@ -127,6 +127,17 @@ TASK_TEXT = ("Review the design above using the persona in the PERSONA block. "
 
 PERSONAS = ["spec-completeness", "implementability", "contradiction"]
 
+PRIOR_TEXT = {
+    1: {p: "(none - this is round 1)" for p in PERSONAS},
+    2: {
+        "spec-completeness": "- S1 (minor, 6. Constraints): the audit record is required but "
+                             "its fields are never named.\n  Decide resolved or reopened.",
+        "implementability": "- I1 (blocker, 5. Failure and edge behaviour): nothing states what "
+                            "happens after the fifth failed attempt.\n  Decide resolved or reopened.",
+        "contradiction": "(no findings from round 1 — nothing to re-test)",
+    },
+}
+
 R1_FINDINGS = {
     "spec-completeness": {
         "persona": "spec-completeness", "round": 1,
@@ -155,7 +166,7 @@ R1_FINDINGS = {
 
 R2_FINDINGS = {
     "spec-completeness": {
-        "persona": "spec-completeness", "round": 2,
+        "persona": "spec-completeness", "round": 2, "prior": {"S1": "reopened"},
         "checks": ["ac-observable", "limits-are-numbers", "data-section-fields"],
         "verdict": "findings",
         "findings": [{
@@ -164,12 +175,12 @@ R2_FINDINGS = {
             "evidence": "spec.md:62"}],
     },
     "implementability": {
-        "persona": "implementability", "round": 2,
-        "checks": ["failure-paths", "retry-cap", "identity-source"],
+        "persona": "implementability", "round": 2, "prior": {"I1": "resolved"},
+        "checks": ["failure-paths", "cap-exhaustion", "identity-source"],
         "verdict": "clean", "findings": [],
     },
     "contradiction": {
-        "persona": "contradiction", "round": 2,
+        "persona": "contradiction", "round": 2, "prior": {},
         "checks": ["criteria-vs-constraints", "prose-vs-source"],
         "verdict": "clean", "findings": [],
     },
@@ -218,7 +229,8 @@ def build(out: Path, agents: Path, template: Path) -> None:
     for rnd, spec, findings in ((1, SPEC_V1, R1_FINDINGS), (2, SPEC_V2, R2_FINDINGS)):
         for p in PERSONAS:
             persona_text = (out / "agents" / f"{p}.md").read_text(encoding="utf-8")
-            prompt = FILLTER.fill(tpl, p, persona_text, spec, sources)
+            prompt = FILLTER.fill(tpl, p, persona_text, spec, sources,
+                                  prior=PRIOR_TEXT[rnd].get(p, ""))
             (out / "review" / "prompts" / f"{p}.r{rnd}.txt").write_text(prompt, encoding="utf-8")
             receipt = {
                 "persona": p, "round": rnd, "isolation": "fresh",

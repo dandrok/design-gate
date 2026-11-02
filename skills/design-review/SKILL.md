@@ -148,8 +148,22 @@ keep the object; if it returned invalid JSON, re-dispatch that persona once
 ```
 
 - `fixed` — edit the spec, then run a **round 2** with that persona. The gate
-  fails a `fixed` that leaves the spec byte-identical, and a `fixed` whose
-  finding reappears in the later round.
+  fails a `fixed` that leaves the spec byte-identical, and a `fixed` the later
+  round did not re-test.
+
+A round-2 prompt carries a `PRIOR` block listing the earlier findings, and its
+task asks for one decision per id. The findings file then carries a `prior` map:
+
+```json
+{"persona": "implementability", "round": 2,
+ "prior": {"X1": "resolved", "X3": "reopened"},
+ "findings": [{"id": "X3", "...": "..."}]}
+```
+
+`resolved` ids must not reappear as findings; `reopened` ids must. Without this
+map the gate cannot tell "the fix held" from "the reviewer found something else
+and numbered it X1" — which is exactly the confusion that lets a reopened blocker
+pass as closed.
 - `accepted` / `rejected` — a rationale of 40+ characters. "Won't fix" is a
   finding nobody resolved.
 - `minor` and `question` findings need no resolution. `blocker` and `major` do.
@@ -186,7 +200,8 @@ receive the reviewer prompts; it does not need the conversation either.
 | findings name existing sections, 40+ char claims, evidence pointer | "needs work" findings nobody can action |
 | clean verdict needs ≥2 named checks | a reviewer that never read the document |
 | spec gate passes | a review of a structurally invalid document |
-| `fixed` requires changed spec + later round | the fix that was asserted instead of written |
+| `fixed` requires changed spec + a later round that says `resolved` | the fix that was asserted instead of written, or silently rerolled into a new finding id |
+| round 2 must carry a `prior` map | a "re-test" that was really a fresh cold read, hiding whether the fix held |
 
 ## Pitfalls
 
@@ -221,6 +236,6 @@ receive the reviewer prompts; it does not need the conversation either.
 |---|---|
 | `scripts/gate_review.py` | the gate: isolation, coverage, findings, resolutions |
 | `templates/fill_prompt.py` | mechanical prompt filling from the template |
-| `tests/run_tests.py` | 21 cases: one clean run plus every seeded defect |
+| `tests/run_tests.py` | 24 cases: one clean run plus every seeded defect |
 | `../../agents/*.md` | the reviewer personas |
 | `../../resources/templates/review_prompt.md` | the only allowed wrapper |

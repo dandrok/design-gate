@@ -10,6 +10,10 @@ inside the blocks below.
 (spec body)
 === SPEC >>>
 
+=== PRIOR <<<
+(prior findings, or "none - this is round 1")
+=== PRIOR >>>
+
 === SOURCE <path> <<<
 (source body)
 === SOURCE <path> >>>

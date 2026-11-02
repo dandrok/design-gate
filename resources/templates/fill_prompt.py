@@ -31,8 +31,12 @@ TASK_TEXT = (
 OPENER = re.compile(r"^=== ([A-Z]+)(?: .*?)? <<<$")
 
 
+NO_PRIOR = "(none - this is round 1)"
+
+
 def fill(template: str, persona: str, persona_text: str, spec: str,
-         sources: list[tuple[str, str]] | None = None, task: str = TASK_TEXT) -> str:
+         sources: list[tuple[str, str]] | None = None, task: str = TASK_TEXT,
+         prior: str = NO_PRIOR) -> str:
     """Replace each template block body; every line outside a block is copied verbatim."""
     sources = sources or []
     lines = template.splitlines()
@@ -57,6 +61,8 @@ def fill(template: str, persona: str, persona_text: str, spec: str,
                 out += [f"=== SOURCE {path} <<<", body.rstrip(), f"=== SOURCE {path} >>>"]
             if not sources:
                 out += ["=== SOURCE <<<", "(no sources cited)", "=== SOURCE >>>"]
+        elif kind == "PRIOR":
+            out += ["=== PRIOR <<<", prior.rstrip(), "=== PRIOR >>>"]
         elif kind == "TASK":
             out += ["=== TASK <<<", task, "=== TASK >>>"]
         else:
@@ -74,7 +80,9 @@ def main() -> int:
     ap.add_argument("--source", action="append", default=[],
                     help="path as it should appear in the prompt; the file is read relative to --root")
     ap.add_argument("--root", default=".", help="where --source paths are read from")
-    ap.add_argument("--task", default=TASK_TEXT)
+    ap.add_argument("--prior", help="file with prior findings, for a round > 1")
+    ap.add_argument("--task", default=TASK_TEXT,
+                    help="round-1 task text; for a later round say it is a re-test")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
@@ -95,9 +103,13 @@ def main() -> int:
             return 2
         sources.append((s, p.read_text(encoding="utf-8")))
 
+    prior = Path(a.prior).read_text(encoding="utf-8") if a.prior else NO_PRIOR
+    if a.prior and not prior.strip():
+        print(f"FATAL: prior file {a.prior} is empty", file=sys.stderr)
+        return 2
     text = fill(Path(a.template).read_text(encoding="utf-8"),
                 persona_path.stem, persona_path.read_text(encoding="utf-8"),
-                spec_path.read_text(encoding="utf-8"), sources, a.task)
+                spec_path.read_text(encoding="utf-8"), sources, a.task, prior)
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")

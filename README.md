@@ -38,7 +38,7 @@ gets the core insight right (full context drafts, empty context reviews):
 | Isolation | documented per host, asserted per run | derived from the stored prompt |
 | Leaked context | not detectable | any line outside the template fails |
 | Two reviewers, two spec versions | not detectable | per-round spec hash comparison |
-| "Fixed" | prose in a report | requires changed document + a later round |
+| "Fixed" | prose in a report | requires a changed document + a later round that says `resolved` for that id |
 | Drift | narrative report | claims block, checked against the repo |
 | Spec quality | review is the only gate | delegates to `spec-writer`'s validator, and refuses to approve without it |
 
@@ -119,7 +119,7 @@ tests/run-all.sh                 every skill's own suite, one total
 
 Verified by running:
 
-- `tests/run-all.sh` → **35/35 cases pass** (21 review, 14 drift). The clean run
+- `tests/run-all.sh` → **38/38 cases pass** (24 review, 14 drift). The clean run
   is approved; each of the other 34 seeds one defect and asserts the gate's
   *message*, not just its exit code.
 - The gate rejects: a missing receipt, a receipt admitting a conversation, a
@@ -129,7 +129,8 @@ Verified by running:
   unresolved blocker, `fixed` with a byte-identical spec, a failing spec gate, two
   reviewers seeing two spec versions, a rewritten persona, a declared round with
   no prompt, evidence outside the inputs, a duplicate finding id, no required
-  reviewers, an edited spec in the prompt, and no `--spec-gate` at all.
+  reviewers, an edited spec in the prompt, no `--spec-gate` at all, a round-2 file
+  with no `prior` map, and a round 2 that reopened a finding marked fixed.
 - Drift: true claims pass; missing path, renamed symbol, symbol outside its
   claimed scope, unregistered endpoint, absent command, no claims block,
   unparseable claim, unknown claim kind, symbol only in `node_modules`, and a

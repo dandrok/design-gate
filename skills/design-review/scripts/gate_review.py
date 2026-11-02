@@ -48,6 +48,14 @@ def sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def path_key(p: str) -> str:
+    """Compare source paths by what they point at, not by how the author spelled it."""
+    s = str(p).strip().strip("`")
+    while s.startswith("./") or s.startswith("../"):
+        s = s[2:] if s.startswith("./") else s[3:]
+    return s
+
+
 def norm(s: str) -> str:
     return re.sub(r"^\s*\d+\.?\s*", "", s.strip().lower()).strip(" :#`*.")
 
@@ -212,7 +220,7 @@ def gate(review: Path, spec_gate: Path | None, template: Path | None) -> tuple[l
                     continue
                 if CONVERSATION_ARTIFACT.search(arg):
                     errs.append(f"{stem}: reviewer received '{arg}', which is a conversation artefact")
-                elif arg not in allow:
+                elif path_key(arg) not in {path_key(a) for a in allow}:
                     errs.append(f"{stem}: reviewer received '{arg}', which is not on the allowlist")
                 if not body.strip():
                     errs.append(f"{stem}: SOURCE '{arg}' is empty")
@@ -272,8 +280,9 @@ def gate(review: Path, spec_gate: Path | None, template: Path | None) -> tuple[l
                     errs.append(f"{label}: no evidence pointer")
                 else:
                     ref = re.split(r"[:#L]", evidence, maxsplit=1)[0].strip().strip("`")
-                    if ref and ref not in {"spec.md", spec_path.name} and ref not in allow \
-                            and not spec_path.name == ref:
+                    if ref and ref not in {"spec.md", spec_path.name} \
+                            and path_key(ref) not in {path_key(a) for a in allow} \
+                            and spec_path.name != ref:
                         errs.append(f"{label}: evidence points at '{ref}', which is neither the spec nor an allowlisted source")
                 section = str(f.get("section", "")).strip()
                 if not section:
@@ -283,6 +292,23 @@ def gate(review: Path, spec_gate: Path | None, template: Path | None) -> tuple[l
                     if headings and not any(ns in h or h in ns for h in headings if h):
                         errs.append(f"{label}: section {section!r} does not exist in the spec "
                                     f"(headings: {', '.join(headings[:6])}...)")
+            if rnd > 1:
+                prior = doc.get("prior")
+                if not isinstance(prior, dict):
+                    errs.append(f"{stem}: round {rnd} carries no `prior` map — a later round "
+                                "must state which earlier findings it re-tested")
+                else:
+                    for pid, pv in prior.items():
+                        pv = str(pv).lower()
+                        if pv not in {"resolved", "reopened"}:
+                            errs.append(f"{stem}: prior[{pid}]={pv!r} must be resolved|reopened")
+                        elif pv == "reopened" and str(pid) not in seen:
+                            errs.append(f"{stem}: prior[{pid}] says reopened but no finding "
+                                        "with that id came back")
+                        elif pv == "resolved" and str(pid) in seen:
+                            errs.append(f"{stem}: prior[{pid}] says resolved but a finding "
+                                        "with that id is still listed")
+
             if not found and str(doc.get("verdict", "")).lower() != "clean":
                 errs.append(f"{stem}: empty findings without verdict 'clean'")
             checks = doc.get("checks") or []
@@ -333,11 +359,17 @@ def gate(review: Path, spec_gate: Path | None, template: Path | None) -> tuple[l
                                     "nothing re-tested it")
                     else:
                         later = review / "findings" / f"{persona}.r{rounds[-1]}.json"
-                        if later.exists():
-                            ids = {str(x.get("id")) for x in
-                                   (json.loads(later.read_text(encoding="utf-8")).get("findings") or [])}
-                            if str(f.get("id")) in ids:
-                                errs.append(f"{key}: marked fixed but round {rounds[-1]} still reports it")
+                        if not later.exists():
+                            errs.append(f"{key}: marked fixed but there is no round "
+                                        f"{rounds[-1]} findings file")
+                        else:
+                            ld = json.loads(later.read_text(encoding="utf-8"))
+                            said = str((ld.get("prior") or {}).get(str(f.get("id")), "")).lower()
+                            if said == "reopened":
+                                errs.append(f"{key}: marked fixed but round {rounds[-1]} reopened it")
+                            elif said != "resolved":
+                                errs.append(f"{key}: marked fixed but round {rounds[-1]} never "
+                                            "re-tested it — record the id under `prior`")
                         fixed_items.append((key, persona, str(f.get("id"))))
 
     if open_items:
