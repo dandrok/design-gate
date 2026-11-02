@@ -1,0 +1,10 @@
+{
+  "name": "design-gate",
+  "version": "0.1.0",
+  "description": "Stress-test a design document with isolated reviewers, then check it against the code.",
+  "author": {
+    "name": "dandrok"
+  },
+  "repository": "https://github.com/dandrok/design-gate",
+  "license": "MIT"
+}
