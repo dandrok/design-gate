@@ -48,6 +48,41 @@ this tool checks reviews, it does not write specifications.
 
 ## How it works
 
+```
+spec.md
+  |  validate-spec.py  -- fails --> fix the spec
+  v
+run.json                      personas, allowlist, rounds
+  |
+  v
+one prompt per persona       template + persona + spec + cited sources
+  |
+  +-- reviewer 1  (fresh context)
+  +-- reviewer 2  (fresh context)
+  +-- reviewer 3  (fresh context)
+  |
+  v
+prompts/ receipts/ findings/  what each reviewer actually saw
+  |
+  v
+gate_review.py -- fail --> fix the run or the spec --> back to run.json
+  |
+  pass
+  v
+spec approved --> build the feature --> gate_drift.py
+                                            |
+                            +---------------+---------------+
+                            |                               |
+                          drift                           clean
+                            |                               |
+                 fix the doc or revert                    merge
+                            |
+                            +--> re-run gate_drift.py
+```
+
+<details>
+<summary>Mermaid version, if your viewer renders it</summary>
+
 ```mermaid
 flowchart TD
     A[spec.md] --> B{spec validates}
@@ -71,36 +106,6 @@ flowchart TD
     K -->|clean| M[merge]
 ```
 
-<details>
-<summary>Same flow as text, if the diagram does not render</summary>
-
-```
-spec.md
-  |  validate-spec.py  -- fails --> fix the spec
-  v
-run.json                      personas, allowlist, rounds
-  |
-  v
-one prompt per persona       template + persona + spec + cited sources
-  |
-  +-- reviewer 1  (fresh context)
-  +-- reviewer 2  (fresh context)
-  +-- reviewer 3  (fresh context)
-  |
-  v
-prompts/ receipts/ findings/  what each reviewer actually saw
-  |
-  v
-gate_review.py -- fail --> fix the run or the spec --> back to run.json
-  |
-  pass
-  v
-spec approved --> build the feature --> gate_drift.py
-                                           |      |
-                                         drift   clean
-                                           |      +--> merge
-                                           +--> fix the doc or revert the code
-```
 </details>
 
 What the gate refuses:
