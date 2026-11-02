@@ -142,9 +142,10 @@ Not verified, stated plainly:
   wiring (exit 0 passes, exit 1 blocks approval) using a stub with the same
   contract, not spec-writer's 300-line validator. Pass the real one via
   `--spec-gate`.
-- **Persona quality is not measured.** A passing suite proves the gates run, not
-  that the reviewers find the right things. That needs a pilot on a real spec with
-  a known seeded hole, and the numbers from it — not adjectives.
+- **Persona quality has exactly one data point.** A cold pilot on a real spec
+  (3 reviewers, 23 findings, 8 blockers) is recorded in `docs/pilot.md`. It found
+  more than the seeded hole and missed the seeded hole — see there for what
+  changed as a result. One pilot is not a measurement.
 - **No host-agnostic isolation guarantee.** The gate verifies the prompt artifact.
   Whether the host actually ran it in a fresh context is the host's property; the
   skill says to stop, not to fake it, when a host cannot spawn isolated subagents.

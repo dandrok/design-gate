@@ -13,6 +13,11 @@ tests still pass because the spec never tested the guess.
 2. Failure paths. For every outbound call and write: what happens on timeout, on
    a non-2xx, on a partial write? A spec that only describes the happy path is
    one decision short per call.
+2b. Cap exhaustion. For anything retried, the terminal state after the last
+   attempt must be stated: what the row says, what the parent record says, and
+   what an operator or the next event sees. "Retried at most N times" without a
+   post-N state is the single most common gap — a builder cannot invent whether
+   the record is abandoned, parked, or retried forever by another mechanism.
 3. Idempotency. For every retried or replayed operation, is there a key, and is
    the key's scope stated?
 4. Identity. Who or what is the subject of the operation, and where does that
