@@ -53,25 +53,58 @@ codex plugin add design-gate@design-gate
 
 ```mermaid
 flowchart TD
-    S["spec.md"] --> V{"validate-spec.py<br/>structurally buildable?"}
-    V -->|"no"| S
-    V -->|"yes"| R["run.json<br/>personas · allowlist · rounds"]
-    R --> P["fill_prompt.py<br/>template + persona + spec + sources"]
-    P --> A1["reviewer 1<br/>fresh context"]
-    P --> A2["reviewer 2<br/>fresh context"]
-    P --> A3["reviewer 3<br/>fresh context"]
-    A1 --> ART[("prompts · receipts · findings<br/>what each reviewer actually saw")]
-    A2 --> ART
-    A3 --> ART
-    ART --> G{"gate_review.py"}
-    G -->|"exit 1: name the defect"| FIX["fix the run, or the spec"]
-    FIX --> R
-    G -->|"exit 0: approved"| B["build"]
-    B --> DR{"gate_drift.py<br/>does the doc still match the code?"}
-    DR -->|"drift"| X["fix the doc, or revert the code"]
-    X --> DR
-    DR -->|"clean"| M["merge"]
+    A[spec.md] --> B{spec validates}
+    B -->|no| A
+    B -->|yes| C[write run.json]
+    C --> D[build one prompt per persona]
+    D --> E1[reviewer 1 fresh context]
+    D --> E2[reviewer 2 fresh context]
+    D --> E3[reviewer 3 fresh context]
+    E1 --> F[save prompts receipts findings]
+    E2 --> F
+    E3 --> F
+    F --> G{gate_review.py}
+    G -->|fail| H[fix the run or the spec]
+    H --> C
+    G -->|pass| I[spec approved]
+    I --> J[build the feature]
+    J --> K{gate_drift.py}
+    K -->|drift| L[fix the doc or revert the code]
+    L --> K
+    K -->|clean| M[merge]
 ```
+
+<details>
+<summary>Same flow as text, if the diagram does not render</summary>
+
+```
+spec.md
+  │  validate-spec.py  ── fails ──► fix the spec
+  ▼
+run.json                      personas, allowlist, rounds
+  │
+  ▼
+one prompt per persona       template + persona + spec + cited sources
+  │
+  ├── reviewer 1  (fresh context)
+  ├── reviewer 2  (fresh context)
+  └── reviewer 3  (fresh context)
+  │
+  ▼
+prompts/ receipts/ findings/  what each reviewer actually saw
+  │
+  ▼
+gate_review.py ── fail ──► fix the run or the spec ──► back to run.json
+  │
+  pass
+  ▼
+spec approved ──► build the feature ──► gate_drift.py
+                                            │      │
+                                          drift   clean
+                                            │      └──► merge
+                                            └──► fix the doc or revert the code
+```
+</details>
 
 The gate reads the artifacts, not the report. What it refuses:
 
@@ -97,24 +130,20 @@ fresh subagent, the report claims the findings were resolved. Nothing checks.
 The one property that cannot be faked is a stored prompt. So the gate stores it,
 re-reads it, and compares it with the template, the spec and the persona on disk.
 
-## How it compares
+## Why not just a review skill?
 
-Google's [Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model)
-gets the core insight right — full context drafts, empty context reviews. It is a
-more complete *process* (brainstorm → draft → review → resolve → bootstrap → drift,
-9 personas, 5 sequential review stages) and it is battle-tested. `design-gate` is a
-smaller thing: two skills that verify, where EGM's review ends in prose.
+A review skill is instructions. This is instructions plus a referee that can say no.
 
-| | EGM | design-gate |
+| | A review skill | design-gate |
 |---|---|---|
-| Review output | report + orchestrator judgement | `gate_review.py` exit code |
-| Isolation | documented per host, asserted per run | derived from the stored prompt |
-| "Fixed" | prose in a report | changed document + a later round says `resolved` for that id |
-| Drift | narrative report | claims block checked against the repo, plus lineage to the approved doc |
-| Brainstorm / draft | included | not included, on purpose |
+| Ends with | a report saying "no blockers" | `exit 1` and a list of what is missing |
+| "Fresh context" | a sentence in the procedure | the prompt is on disk, and any line outside the template fails the run |
+| "Fixed" | the model's word | the document changed, and a later round says `resolved` for that id |
+| Re-checkable later | no, it lives in a transcript | yes, reopen the run directory |
 
-Run both if you like: EGM's brainstorm and draft feed a spec, and this gate sits
-behind its review.
+Use it when agents do the reviewing, when someone else has to trust the result, or
+when you want a merge blocked on it. If you review your own spec alone, a plain
+review skill is cheaper.
 
 ## Quickstart
 
@@ -201,5 +230,4 @@ Not verified, stated plainly:
 
 ## Licence
 
-MIT. The reviewer-persona idea (full-context author, empty-context reviewers) comes
-from Google's Elephant-Goldfish Model, Apache-2.0; no text or code from it is used.
+MIT. Prior art is credited in [NOTICE.md](NOTICE.md).
