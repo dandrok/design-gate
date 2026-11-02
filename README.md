@@ -50,34 +50,34 @@ this tool checks reviews, it does not write specifications.
 
 ```
 spec.md
-  |  validate-spec.py  -- fails --> fix the spec
+  |  validate-spec.py fails --> fix the spec
   v
-run.json                      personas, allowlist, rounds
+run.json              personas, allowlist, rounds
   |
   v
-one prompt per persona       template + persona + spec + cited sources
+one prompt per persona    template + persona + spec + sources
   |
-  +-- reviewer 1  (fresh context)
-  +-- reviewer 2  (fresh context)
-  +-- reviewer 3  (fresh context)
-  |
-  v
-prompts/ receipts/ findings/  what each reviewer actually saw
+  +-- reviewer 1   (fresh context)
+  +-- reviewer 2   (fresh context)
+  +-- reviewer 3   (fresh context)
   |
   v
-gate_review.py -- fail --> fix the run or the spec --> back to run.json
+prompts/  receipts/  findings/   what each reviewer saw
+  |
+  v
+gate_review.py -- fail --> fix the run or the spec --> back
   |
   pass
   v
-spec approved --> build the feature --> gate_drift.py
-                                            |
-                            +---------------+---------------+
-                            |                               |
-                          drift                           clean
-                            |                               |
-                 fix the doc or revert                    merge
-                            |
-                            +--> re-run gate_drift.py
+spec approved --> build --> gate_drift.py
+                              |
+                +-------------+-------------+
+                |                           |
+              drift                       clean
+                |                           |
+      fix the doc or revert               merge
+                |
+                +--> re-run gate_drift.py
 ```
 
 <details>
